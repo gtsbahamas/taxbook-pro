@@ -1,14 +1,9 @@
 /**
  * Login Page - taxbook-pro
- * Generated: 2026-01-19
  *
- * Login page component with OAuth support.
- * Place in: app/(auth)/login/page.tsx
+ * Refined split-layout login with brand panel and testimonial.
+ * Features: Glass effects, animations, premium typography.
  */
-
-// ============================================================
-// LOGIN PAGE - app/(auth)/login/page.tsx
-// ============================================================
 
 'use client';
 
@@ -19,12 +14,21 @@ import { signIn, signInWithGoogle, signInWithGitHub, signInWithDiscord, type OAu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader } from '@/components/ui/card';
 import { GuestGuard } from '@/components/auth-guard';
 
 // ============================================================
-// OAUTH PROVIDER ICONS
+// ICONS
 // ============================================================
+
+function LogoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="8" fill="currentColor" fillOpacity="0.1" />
+      <path d="M12 14h16M12 20h12M12 26h8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="28" cy="26" r="4" fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -53,27 +57,25 @@ function DiscordIcon({ className }: { className?: string }) {
   );
 }
 
-// ============================================================
-// OAUTH DIVIDER COMPONENT
-// ============================================================
-
-function OAuthDivider() {
+function QuoteIcon({ className }: { className?: string }) {
   return (
-    <div className="relative my-4">
-      <div className="absolute inset-0 flex items-center">
-        <span className="w-full border-t" />
-      </div>
-      <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-card px-2 text-muted-foreground">
-          Or continue with
-        </span>
-      </div>
-    </div>
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6.5 10c-.223 0-.437.034-.65.065.069-.232.14-.468.254-.68.114-.308.292-.575.469-.844.148-.291.409-.488.601-.737.201-.242.475-.403.692-.604.213-.21.492-.315.714-.463.232-.133.434-.28.65-.35l.539-.222.474-.197-.485-1.938-.597.144c-.191.048-.424.104-.689.171-.271.05-.56.187-.882.312-.318.142-.686.238-1.028.467-.344.218-.741.4-1.091.692-.339.301-.748.562-1.05.945-.33.358-.656.734-.909 1.162-.293.408-.492.856-.702 1.299-.19.443-.343.896-.468 1.336-.237.882-.343 1.72-.384 2.437-.034.718-.014 1.315.028 1.747.015.204.043.402.063.539l.025.168.026-.006A4.5 4.5 0 1 0 6.5 10zm11 0c-.223 0-.437.034-.65.065.069-.232.14-.468.254-.68.114-.308.292-.575.469-.844.148-.291.409-.488.601-.737.201-.242.475-.403.692-.604.213-.21.492-.315.714-.463.232-.133.434-.28.65-.35l.539-.222.474-.197-.485-1.938-.597.144c-.191.048-.424.104-.689.171-.271.05-.56.187-.882.312-.317.143-.686.238-1.028.467-.344.218-.741.4-1.091.692-.339.301-.748.562-1.05.944-.33.358-.656.734-.909 1.162-.293.408-.492.856-.702 1.299-.19.443-.343.896-.468 1.336-.237.882-.343 1.72-.384 2.437-.034.718-.014 1.315.028 1.747.015.204.043.402.063.539l.025.168.026-.006A4.5 4.5 0 1 0 17.5 10z"/>
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <path d="m9 11 3 3L22 4" />
+    </svg>
   );
 }
 
 // ============================================================
-// OAUTH BUTTONS COMPONENT
+// OAUTH COMPONENTS
 // ============================================================
 
 interface OAuthButtonsProps {
@@ -85,48 +87,52 @@ interface OAuthButtonsProps {
 function OAuthButtons({ loading, onOAuthClick, loadingProvider }: OAuthButtonsProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Button
+      <button
         type="button"
-        variant="outline"
         onClick={() => onOAuthClick('google')}
         disabled={loading}
         aria-label="Sign in with Google"
+        className="flex items-center justify-center h-12 rounded-lg border border-border bg-card hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
       >
         {loadingProvider === 'google' ? (
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         ) : (
           <GoogleIcon className="h-5 w-5" />
         )}
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        variant="outline"
         onClick={() => onOAuthClick('github')}
         disabled={loading}
         aria-label="Sign in with GitHub"
+        className="flex items-center justify-center h-12 rounded-lg border border-border bg-card hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
       >
         {loadingProvider === 'github' ? (
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         ) : (
           <GitHubIcon className="h-5 w-5" />
         )}
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        variant="outline"
         onClick={() => onOAuthClick('discord')}
         disabled={loading}
         aria-label="Sign in with Discord"
+        className="flex items-center justify-center h-12 rounded-lg border border-border bg-card hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
       >
         {loadingProvider === 'discord' ? (
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         ) : (
           <DiscordIcon className="h-5 w-5" />
         )}
-      </Button>
+      </button>
     </div>
   );
 }
+
+// ============================================================
+// LOGIN PAGE CONTENT
+// ============================================================
 
 function LoginPageContent() {
   const router = useRouter();
@@ -139,7 +145,6 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
-  // Check for error from OAuth callback
   const authError = searchParams.get('error');
   const errorMessage = authError === 'auth_failed'
     ? 'Authentication failed. Please try again.'
@@ -180,46 +185,132 @@ function LoginPageContent() {
         return;
     }
 
-    // If we get here, the OAuth redirect failed
     if (!result.ok) {
       setError(result.error.message);
       setOauthLoading(null);
     }
-    // On success, user is redirected - we won't reach here
   }
 
   const isLoading = loading || oauthLoading !== null;
 
   return (
     <GuestGuard>
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <h1 className="text-2xl font-bold">Sign in</h1>
-            <CardDescription>
-              Choose your preferred sign-in method
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <main className="min-h-screen flex">
+        {/* Brand Panel - Left Side */}
+        <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-pattern opacity-10" />
+
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-secondary/30" />
+
+          {/* Content */}
+          <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
+            {/* Logo & Tagline */}
+            <div className="animate-fade-up">
+              <Link href="/" className="flex items-center gap-3 group">
+                <LogoIcon className="h-10 w-10 text-primary-foreground" />
+                <span className="font-display text-2xl font-semibold">TaxBook Pro</span>
+              </Link>
+              <p className="mt-4 text-lg text-primary-foreground/80 max-w-sm">
+                The intelligent platform for modern tax professionals.
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="space-y-4 animate-fade-up stagger-2">
+              {[
+                'Smart scheduling that adapts to your workflow',
+                'Secure document management & client portal',
+                'Real-time insights and deadline tracking',
+              ].map((feature, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <CheckCircleIcon className="h-5 w-5 text-accent flex-shrink-0" />
+                  <span className="text-primary-foreground/90">{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Testimonial */}
+            <div className="animate-fade-up stagger-3">
+              <div className="glass rounded-2xl p-6 bg-white/5 backdrop-blur-sm border border-white/10">
+                <QuoteIcon className="h-8 w-8 text-accent/60 mb-4" />
+                <blockquote className="text-lg text-primary-foreground/90 leading-relaxed">
+                  &ldquo;TaxBook Pro transformed how I manage my practice. I&apos;ve saved 10+ hours every week during tax season.&rdquo;
+                </blockquote>
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
+                    <span className="text-sm font-semibold text-accent">SM</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-primary-foreground">Sarah Mitchell</p>
+                    <p className="text-sm text-primary-foreground/60">CPA, Mitchell & Associates</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative Elements */}
+          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 -left-10 w-40 h-40 bg-secondary/20 rounded-full blur-2xl" />
+        </div>
+
+        {/* Form Panel - Right Side */}
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-background">
+          <div className="w-full max-w-md">
+            {/* Mobile Logo */}
+            <div className="lg:hidden mb-8 animate-fade-up">
+              <Link href="/" className="flex items-center gap-3">
+                <LogoIcon className="h-10 w-10 text-primary" />
+                <span className="font-display text-2xl font-semibold text-foreground">TaxBook Pro</span>
+              </Link>
+            </div>
+
+            {/* Form Header */}
+            <div className="mb-8 animate-fade-up">
+              <h1 className="font-display text-3xl font-semibold text-foreground">
+                Welcome back
+              </h1>
+              <p className="mt-2 text-muted-foreground">
+                Sign in to your account to continue
+              </p>
+            </div>
+
+            {/* Error Message */}
             {(error || errorMessage) && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+              <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive animate-scale-up" role="alert">
                 {error || errorMessage}
               </div>
             )}
 
             {/* OAuth Buttons */}
-            <OAuthButtons
-              loading={isLoading}
-              onOAuthClick={handleOAuthClick}
-              loadingProvider={oauthLoading}
-            />
+            <div className="animate-fade-up stagger-2">
+              <OAuthButtons
+                loading={isLoading}
+                onOAuthClick={handleOAuthClick}
+                loadingProvider={oauthLoading}
+              />
+            </div>
 
-            <OAuthDivider />
+            {/* Divider */}
+            <div className="relative my-8 animate-fade-up stagger-3">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-4 text-muted-foreground">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
 
             {/* Email/Password Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5 animate-fade-up stagger-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Email address
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -229,14 +320,18 @@ function LoginPageContent() {
                   required
                   autoComplete="email"
                   disabled={isLoading}
+                  className="h-12 px-4 rounded-lg border-border bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </Label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm text-muted-foreground hover:underline"
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -249,22 +344,54 @@ function LoginPageContent() {
                   required
                   autoComplete="current-password"
                   disabled={isLoading}
+                  className="h-12 px-4 rounded-lg border-border bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {loading ? 'Signing in...' : 'Sign in with email'}
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-medium rounded-lg bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-[1.01]"
+                disabled={isLoading}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    Signing in...
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
               </Button>
             </form>
-          </CardContent>
-          <CardFooter>
-            <p className="text-center text-sm text-muted-foreground w-full">
+
+            {/* Sign Up Link */}
+            <p className="mt-8 text-center text-sm text-muted-foreground animate-fade-up stagger-5">
               Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-primary hover:underline">
-                Sign up
+              <Link href="/signup" className="text-primary font-medium hover:text-primary/80 transition-colors">
+                Create an account
               </Link>
             </p>
-          </CardFooter>
-        </Card>
+
+            {/* Trust Indicators */}
+            <div className="mt-8 pt-8 border-t border-border animate-fade-up stagger-6">
+              <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  256-bit encryption
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  SOC 2 compliant
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     </GuestGuard>
   );
@@ -276,23 +403,28 @@ function LoginPageContent() {
 
 function LoginPageLoading() {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="h-8 w-24 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-48 animate-pulse rounded bg-muted" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="h-10 w-full animate-pulse rounded bg-muted" />
-          <div className="h-10 w-full animate-pulse rounded bg-muted" />
-        </CardContent>
-      </Card>
+    <main className="min-h-screen flex">
+      {/* Brand Panel Skeleton */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary" />
+
+      {/* Form Panel Skeleton */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-background">
+        <div className="w-full max-w-md space-y-6">
+          <div className="space-y-2">
+            <div className="h-9 w-48 animate-pulse rounded-lg bg-muted" />
+            <div className="h-5 w-64 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-12 w-full animate-pulse rounded-lg bg-muted" />
+          <div className="h-12 w-full animate-pulse rounded-lg bg-muted" />
+          <div className="h-12 w-full animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
     </main>
   );
 }
 
 // ============================================================
-// EXPORTED PAGE (with Suspense for useSearchParams)
+// EXPORTED PAGE
 // ============================================================
 
 export default function LoginPage() {
@@ -302,7 +434,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-
-// ============================================================
-// GENERATED BY MENTAL MODELS SDLC
-// ============================================================

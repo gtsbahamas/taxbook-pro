@@ -82,20 +82,20 @@ type ThemeValue = 'light' | 'dark' | 'system';
 export default function SettingsPage() {
   return (
     <AuthGuard>
-      <div className="container max-w-4xl py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
+      <div className="max-w-4xl">
+        <div className="mb-8 animate-fade-up">
+          <h1 className="font-display text-3xl font-semibold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-1">
             Manage your account settings and preferences.
           </p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+        <Tabs defaultValue="profile" className="space-y-6 animate-fade-up stagger-2">
+          <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
+            <TabsTrigger value="profile" className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Profile</TabsTrigger>
+            <TabsTrigger value="account" className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Account</TabsTrigger>
+            <TabsTrigger value="notifications" className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Notifications</TabsTrigger>
+            <TabsTrigger value="appearance" className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Appearance</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
@@ -220,9 +220,9 @@ function ProfileSettings() {
   }
 
   return (
-    <Card>
+    <Card className="border-border">
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
+        <CardTitle className="font-display text-lg">Profile</CardTitle>
         <CardDescription>
           Update your personal information and profile picture.
         </CardDescription>
@@ -371,9 +371,9 @@ function AccountSettings() {
   }
 
   return (
-    <Card>
+    <Card className="border-border">
       <CardHeader>
-        <CardTitle>Change Password</CardTitle>
+        <CardTitle className="font-display text-lg">Change Password</CardTitle>
         <CardDescription>
           Update your password to keep your account secure.
         </CardDescription>
@@ -567,9 +567,9 @@ function NotificationSettings() {
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)}>
-      <Card>
+      <Card className="border-border">
         <CardHeader>
-          <CardTitle>Email Notifications</CardTitle>
+          <CardTitle className="font-display text-lg">Email Notifications</CardTitle>
           <CardDescription>
             Choose what emails you want to receive.
           </CardDescription>
@@ -601,9 +601,9 @@ function NotificationSettings() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
+      <Card className="mt-6 border-border">
         <CardHeader>
-          <CardTitle>Push Notifications</CardTitle>
+          <CardTitle className="font-display text-lg">Push Notifications</CardTitle>
           <CardDescription>
             Manage push notification preferences for your devices.
           </CardDescription>
@@ -703,9 +703,9 @@ function AppearanceSettings() {
   );
 
   return (
-    <Card>
+    <Card className="border-border">
       <CardHeader>
-        <CardTitle>Appearance</CardTitle>
+        <CardTitle className="font-display text-lg">Appearance</CardTitle>
         <CardDescription>
           Customize how the application looks on your device.
         </CardDescription>
@@ -837,7 +837,7 @@ function DangerZone() {
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle className="text-destructive">Danger Zone</CardTitle>
+        <CardTitle className="font-display text-lg text-destructive">Danger Zone</CardTitle>
         <CardDescription>
           Irreversible and destructive actions.
         </CardDescription>

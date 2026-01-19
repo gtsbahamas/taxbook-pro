@@ -8,32 +8,51 @@
  */
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Display font - Editorial, trustworthy serifs for headings
+const displayFont = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Body font - Clean, modern, highly readable
+const bodyFont = Plus_Jakarta_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+// Mono font - For code and data
+const monoFont = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "taxbook-pro",
-  description: "Welcome to taxbook-pro",
+  title: {
+    default: "TaxBook Pro | Smart Scheduling for Tax Professionals",
+    template: "%s | TaxBook Pro",
+  },
+  description: "Streamline your tax practice with intelligent scheduling, client management, and document organization. Built for modern tax professionals.",
+  keywords: ["tax software", "tax scheduling", "tax professional", "client management", "tax practice"],
   openGraph: {
-    title: "taxbook-pro",
-    description: "Welcome to taxbook-pro",
+    title: "TaxBook Pro | Smart Scheduling for Tax Professionals",
+    description: "Streamline your tax practice with intelligent scheduling, client management, and document organization.",
     type: "website",
+    siteName: "TaxBook Pro",
   },
   twitter: {
     card: "summary_large_image",
-    title: "taxbook-pro",
-    description: "Welcome to taxbook-pro",
+    title: "TaxBook Pro | Smart Scheduling for Tax Professionals",
+    description: "Streamline your tax practice with intelligent scheduling, client management, and document organization.",
   },
 };
 
@@ -43,9 +62,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} font-body antialiased`}
       >
         <Providers>{children}</Providers>
       </body>
