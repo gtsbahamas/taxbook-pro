@@ -1,0 +1,3015 @@
+# ============================================================
+# OpenAPI Specification - taxbook-pro
+# Generated: 2026-01-19
+# ============================================================
+#
+# API-FIRST DESIGN: This spec is the source of truth.
+# Backend routes MUST match these paths exactly.
+# Frontend API clients are generated from this spec.
+#
+# Usage:
+#   - View in Swagger UI: https://editor.swagger.io/
+#   - Generate clients: npx openapi-generator-cli generate
+#   - Validate: npx @stoplight/spectral-cli lint docs/openapi.yaml
+#
+# ============================================================
+
+openapi: 3.0.3
+
+info:
+  title: taxbook-pro API
+  version: 1.0.0
+  description: |
+    REST API for taxbook-pro.
+
+    ## Authentication
+    All endpoints (except where noted) require a valid Bearer token in the Authorization header.
+
+    ## Rate Limiting
+    - Standard: 100 requests/minute
+    - Authenticated: 1000 requests/minute
+
+    ## Pagination
+    List endpoints support cursor-based pagination via `cursor` and `limit` query parameters.
+  contact:
+    name: API Support
+    email: api@example.com
+  license:
+    name: Proprietary
+    url: https://example.com/license
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://api.staging.example.com/v1
+    description: Staging
+  - url: http://localhost:3000/api
+    description: Local Development
+
+# ============================================================
+# SECURITY SCHEMES
+# ============================================================
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from authentication endpoint.
+        Include in Authorization header: `Bearer <token>`
+
+# ============================================================
+# REUSABLE SCHEMAS
+# ============================================================
+
+  schemas:
+    # --- Error Response ---
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - type
+            - message
+          properties:
+            type:
+              type: string
+              enum:
+                - bad_request
+                - unauthorized
+                - forbidden
+                - not_found
+                - conflict
+                - rate_limited
+                - internal_error
+            message:
+              type: string
+              example: The requested resource was not found
+            details:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidationError'
+            requestId:
+              type: string
+              format: uuid
+              example: 550e8400-e29b-41d4-a716-446655440000
+
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          example: email
+        message:
+          type: string
+          example: Invalid email format
+        code:
+          type: string
+          example: invalid_format
+
+    # --- Pagination ---
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        hasMore:
+          type: boolean
+          example: true
+        nextCursor:
+          type: string
+          example: eyJpZCI6IjEyMyJ9
+
+    # --- Timestamps ---
+    Timestamps:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2024-01-15T14:45:00Z'
+
+    # --- Profile ---
+    Profile:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - email
+        - name
+        - timezone
+        - subscriptionTier
+        - maxDailyAppointments
+        - maxDailyAppointmentsTaxSeason
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: References auth.users(id)
+        email:
+          type: string
+          example: 'Example email'
+        name:
+          type: string
+          example: 'Example name'
+        firmName:
+          type: string
+          example: 'Example firm_name'
+          description: Name of the tax preparation firm
+          nullable: true
+        licenseNumber:
+          type: string
+          example: 'Example license_number'
+          description: CPA or tax preparer license number
+          nullable: true
+        timezone:
+          type: string
+          example: 'Example timezone'
+          description: User&#x27;s timezone for scheduling
+        subscriptionTier:
+          type: string
+          example: 'Example subscription_tier'
+        bookingSlug:
+          type: string
+          example: 'Example booking_slug'
+          description: Unique slug for public booking page
+          nullable: true
+        taxSeasonStart:
+          type: string
+          example: 'tax_season_start'
+          description: When tax season starts (for capacity limits)
+          nullable: true
+        taxSeasonEnd:
+          type: string
+          example: 'tax_season_end'
+          description: When tax season ends
+          nullable: true
+        maxDailyAppointments:
+          type: number
+          example: 100
+          description: Maximum appointments per day during normal times
+        maxDailyAppointmentsTaxSeason:
+          type: number
+          example: 100
+          description: Maximum appointments per day during tax season
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Profile was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Profile was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateProfileInput:
+      type: object
+      required:
+        - userId
+        - email
+        - name
+        - timezone
+        - subscriptionTier
+        - maxDailyAppointments
+        - maxDailyAppointmentsTaxSeason
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: References auth.users(id)
+        email:
+          type: string
+          example: 'Example email'
+        name:
+          type: string
+          example: 'Example name'
+        firmName:
+          type: string
+          example: 'Example firm_name'
+          description: Name of the tax preparation firm
+        licenseNumber:
+          type: string
+          example: 'Example license_number'
+          description: CPA or tax preparer license number
+        timezone:
+          type: string
+          example: 'Example timezone'
+          description: User&#x27;s timezone for scheduling
+        subscriptionTier:
+          type: string
+          example: 'Example subscription_tier'
+        bookingSlug:
+          type: string
+          example: 'Example booking_slug'
+          description: Unique slug for public booking page
+        taxSeasonStart:
+          type: string
+          example: 'tax_season_start'
+          description: When tax season starts (for capacity limits)
+        taxSeasonEnd:
+          type: string
+          example: 'tax_season_end'
+          description: When tax season ends
+        maxDailyAppointments:
+          type: number
+          example: 100
+          description: Maximum appointments per day during normal times
+        maxDailyAppointmentsTaxSeason:
+          type: number
+          example: 100
+          description: Maximum appointments per day during tax season
+
+    UpdateProfileInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: References auth.users(id)
+        email:
+          type: string
+          example: 'Example email'
+        name:
+          type: string
+          example: 'Example name'
+        firmName:
+          type: string
+          example: 'Example firm_name'
+          description: Name of the tax preparation firm
+        licenseNumber:
+          type: string
+          example: 'Example license_number'
+          description: CPA or tax preparer license number
+        timezone:
+          type: string
+          example: 'Example timezone'
+          description: User&#x27;s timezone for scheduling
+        subscriptionTier:
+          type: string
+          example: 'Example subscription_tier'
+        bookingSlug:
+          type: string
+          example: 'Example booking_slug'
+          description: Unique slug for public booking page
+        taxSeasonStart:
+          type: string
+          example: 'tax_season_start'
+          description: When tax season starts (for capacity limits)
+        taxSeasonEnd:
+          type: string
+          example: 'tax_season_end'
+          description: When tax season ends
+        maxDailyAppointments:
+          type: number
+          example: 100
+          description: Maximum appointments per day during normal times
+        maxDailyAppointmentsTaxSeason:
+          type: number
+          example: 100
+          description: Maximum appointments per day during tax season
+
+    ProfileListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Profile'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    ProfileResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Profile'
+
+    ProfileDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+    # --- Client ---
+    Client:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - name
+        - email
+        - preferredContact
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this client
+        name:
+          type: string
+          example: 'Example name'
+        email:
+          type: string
+          example: 'Example email'
+        phone:
+          type: string
+          example: 'Example phone'
+          nullable: true
+        taxIdLast4:
+          type: string
+          example: 'Example tax_id_last4'
+          description: Last 4 digits of SSN/TIN for verification
+          nullable: true
+        filingStatus:
+          type: string
+          example: 'Example filing_status'
+          nullable: true
+        preferredContact:
+          type: string
+          example: 'Example preferred_contact'
+        notes:
+          type: string
+          example: 'Example notes'
+          nullable: true
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Client was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Client was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateClientInput:
+      type: object
+      required:
+        - userId
+        - name
+        - email
+        - preferredContact
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this client
+        name:
+          type: string
+          example: 'Example name'
+        email:
+          type: string
+          example: 'Example email'
+        phone:
+          type: string
+          example: 'Example phone'
+        taxIdLast4:
+          type: string
+          example: 'Example tax_id_last4'
+          description: Last 4 digits of SSN/TIN for verification
+        filingStatus:
+          type: string
+          example: 'Example filing_status'
+        preferredContact:
+          type: string
+          example: 'Example preferred_contact'
+        notes:
+          type: string
+          example: 'Example notes'
+
+    UpdateClientInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this client
+        name:
+          type: string
+          example: 'Example name'
+        email:
+          type: string
+          example: 'Example email'
+        phone:
+          type: string
+          example: 'Example phone'
+        taxIdLast4:
+          type: string
+          example: 'Example tax_id_last4'
+          description: Last 4 digits of SSN/TIN for verification
+        filingStatus:
+          type: string
+          example: 'Example filing_status'
+        preferredContact:
+          type: string
+          example: 'Example preferred_contact'
+        notes:
+          type: string
+          example: 'Example notes'
+
+    ClientListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Client'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    ClientResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Client'
+
+    ClientDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+    # --- Service ---
+    Service:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - name
+        - durationMinutes
+        - taxSeasonOnly
+        - requiresDocuments
+        - isActive
+        - bufferMinutes
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who offers this service
+        name:
+          type: string
+          example: 'Example name'
+        description:
+          type: string
+          example: 'Example description'
+          nullable: true
+        durationMinutes:
+          type: number
+          example: 100
+        price:
+          type: number
+          example: 100
+          description: Price in dollars (optional, for display purposes)
+          nullable: true
+        taxSeasonOnly:
+          type: boolean
+          example: true
+          description: Only available during tax season
+        requiresDocuments:
+          type: boolean
+          example: true
+          description: Client must upload documents before appointment
+        isActive:
+          type: boolean
+          example: true
+          description: Whether this service is currently offered
+        bufferMinutes:
+          type: number
+          example: 100
+          description: Buffer time after appointment
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Service was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Service was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateServiceInput:
+      type: object
+      required:
+        - userId
+        - name
+        - durationMinutes
+        - taxSeasonOnly
+        - requiresDocuments
+        - isActive
+        - bufferMinutes
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who offers this service
+        name:
+          type: string
+          example: 'Example name'
+        description:
+          type: string
+          example: 'Example description'
+        durationMinutes:
+          type: number
+          example: 100
+        price:
+          type: number
+          example: 100
+          description: Price in dollars (optional, for display purposes)
+        taxSeasonOnly:
+          type: boolean
+          example: true
+          description: Only available during tax season
+        requiresDocuments:
+          type: boolean
+          example: true
+          description: Client must upload documents before appointment
+        isActive:
+          type: boolean
+          example: true
+          description: Whether this service is currently offered
+        bufferMinutes:
+          type: number
+          example: 100
+          description: Buffer time after appointment
+
+    UpdateServiceInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who offers this service
+        name:
+          type: string
+          example: 'Example name'
+        description:
+          type: string
+          example: 'Example description'
+        durationMinutes:
+          type: number
+          example: 100
+        price:
+          type: number
+          example: 100
+          description: Price in dollars (optional, for display purposes)
+        taxSeasonOnly:
+          type: boolean
+          example: true
+          description: Only available during tax season
+        requiresDocuments:
+          type: boolean
+          example: true
+          description: Client must upload documents before appointment
+        isActive:
+          type: boolean
+          example: true
+          description: Whether this service is currently offered
+        bufferMinutes:
+          type: number
+          example: 100
+          description: Buffer time after appointment
+
+    ServiceListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Service'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    ServiceResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Service'
+
+    ServiceDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+    # --- Appointment ---
+    Appointment:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - clientId
+        - serviceId
+        - startsAt
+        - endsAt
+        - status
+        - reminderSent24h
+        - reminderSent1h
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional
+        clientId:
+          type: string
+          example: 'Example client_id'
+        serviceId:
+          type: string
+          example: 'Example service_id'
+        startsAt:
+          type: string
+          example: 'starts_at'
+        endsAt:
+          type: string
+          example: 'ends_at'
+        status:
+          type: string
+          example: 'Example status'
+        notes:
+          type: string
+          example: 'Example notes'
+          nullable: true
+        meetingLink:
+          type: string
+          example: 'Example meeting_link'
+          description: Video conference link (Zoom, etc.)
+          nullable: true
+        reminderSent24h:
+          type: boolean
+          example: true
+          description: Whether 24h reminder was sent
+        reminderSent1h:
+          type: boolean
+          example: true
+          description: Whether 1h reminder was sent
+        cancellationReason:
+          type: string
+          example: 'Example cancellation_reason'
+          description: Reason for cancellation if applicable
+          nullable: true
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Appointment was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Appointment was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateAppointmentInput:
+      type: object
+      required:
+        - userId
+        - clientId
+        - serviceId
+        - startsAt
+        - endsAt
+        - status
+        - reminderSent24h
+        - reminderSent1h
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional
+        clientId:
+          type: string
+          example: 'Example client_id'
+        serviceId:
+          type: string
+          example: 'Example service_id'
+        startsAt:
+          type: string
+          example: 'starts_at'
+        endsAt:
+          type: string
+          example: 'ends_at'
+        status:
+          type: string
+          example: 'Example status'
+        notes:
+          type: string
+          example: 'Example notes'
+        meetingLink:
+          type: string
+          example: 'Example meeting_link'
+          description: Video conference link (Zoom, etc.)
+        reminderSent24h:
+          type: boolean
+          example: true
+          description: Whether 24h reminder was sent
+        reminderSent1h:
+          type: boolean
+          example: true
+          description: Whether 1h reminder was sent
+        cancellationReason:
+          type: string
+          example: 'Example cancellation_reason'
+          description: Reason for cancellation if applicable
+
+    UpdateAppointmentInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional
+        clientId:
+          type: string
+          example: 'Example client_id'
+        serviceId:
+          type: string
+          example: 'Example service_id'
+        startsAt:
+          type: string
+          example: 'starts_at'
+        endsAt:
+          type: string
+          example: 'ends_at'
+        status:
+          type: string
+          example: 'Example status'
+        notes:
+          type: string
+          example: 'Example notes'
+        meetingLink:
+          type: string
+          example: 'Example meeting_link'
+          description: Video conference link (Zoom, etc.)
+        reminderSent24h:
+          type: boolean
+          example: true
+          description: Whether 24h reminder was sent
+        reminderSent1h:
+          type: boolean
+          example: true
+          description: Whether 1h reminder was sent
+        cancellationReason:
+          type: string
+          example: 'Example cancellation_reason'
+          description: Reason for cancellation if applicable
+
+    AppointmentListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Appointment'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    AppointmentResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Appointment'
+
+    AppointmentDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+    # --- Availability ---
+    Availability:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - dayOfWeek
+        - startTime
+        - endTime
+        - isTaxSeason
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+        dayOfWeek:
+          type: number
+          example: 100
+          description: 0&#x3D;Sunday, 1&#x3D;Monday, ..., 6&#x3D;Saturday
+        startTime:
+          type: string
+          example: 'Example start_time'
+          description: Start time in HH:MM format
+        endTime:
+          type: string
+          example: 'Example end_time'
+          description: End time in HH:MM format
+        isTaxSeason:
+          type: boolean
+          example: true
+          description: Whether this is tax season availability
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Availability was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Availability was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateAvailabilityInput:
+      type: object
+      required:
+        - userId
+        - dayOfWeek
+        - startTime
+        - endTime
+        - isTaxSeason
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+        dayOfWeek:
+          type: number
+          example: 100
+          description: 0&#x3D;Sunday, 1&#x3D;Monday, ..., 6&#x3D;Saturday
+        startTime:
+          type: string
+          example: 'Example start_time'
+          description: Start time in HH:MM format
+        endTime:
+          type: string
+          example: 'Example end_time'
+          description: End time in HH:MM format
+        isTaxSeason:
+          type: boolean
+          example: true
+          description: Whether this is tax season availability
+
+    UpdateAvailabilityInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+        dayOfWeek:
+          type: number
+          example: 100
+          description: 0&#x3D;Sunday, 1&#x3D;Monday, ..., 6&#x3D;Saturday
+        startTime:
+          type: string
+          example: 'Example start_time'
+          description: Start time in HH:MM format
+        endTime:
+          type: string
+          example: 'Example end_time'
+          description: End time in HH:MM format
+        isTaxSeason:
+          type: boolean
+          example: true
+          description: Whether this is tax season availability
+
+    AvailabilityListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Availability'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    AvailabilityResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Availability'
+
+    AvailabilityDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+    # --- Document ---
+    Document:
+      type: object
+      required:
+        - id
+        - id
+        - userId
+        - clientId
+        - documentType
+        - status
+        - createdAt
+        - updatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the 
+          example: 550e8400-e29b-41d4-a716-446655440000
+        id:
+          type: string
+          example: 'Example id'
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this
+        clientId:
+          type: string
+          example: 'Example client_id'
+        appointmentId:
+          type: string
+          example: 'Example appointment_id'
+          description: Optional link to specific appointment
+          nullable: true
+        documentType:
+          type: string
+          example: 'Example document_type'
+        fileUrl:
+          type: string
+          example: 'Example file_url'
+          description: Supabase Storage URL
+          nullable: true
+        fileName:
+          type: string
+          example: 'Example file_name'
+          description: Original filename
+          nullable: true
+        status:
+          type: string
+          example: 'Example status'
+        taxYear:
+          type: number
+          example: 100
+          description: Tax year this document is for
+          nullable: true
+        notes:
+          type: string
+          example: 'Example notes'
+          description: Notes about the document
+          nullable: true
+        rejectionReason:
+          type: string
+          example: 'Example rejection_reason'
+          description: Reason for rejection if applicable
+          nullable: true
+        createdAt:
+          type: string
+          example: 'created_at'
+        updatedAt:
+          type: string
+          example: 'updated_at'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Document was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Document was last updated
+          example: '2024-01-15T14:45:00Z'
+
+    CreateDocumentInput:
+      type: object
+      required:
+        - userId
+        - clientId
+        - documentType
+        - status
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this
+        clientId:
+          type: string
+          example: 'Example client_id'
+        appointmentId:
+          type: string
+          example: 'Example appointment_id'
+          description: Optional link to specific appointment
+        documentType:
+          type: string
+          example: 'Example document_type'
+        fileUrl:
+          type: string
+          example: 'Example file_url'
+          description: Supabase Storage URL
+        fileName:
+          type: string
+          example: 'Example file_name'
+          description: Original filename
+        status:
+          type: string
+          example: 'Example status'
+        taxYear:
+          type: number
+          example: 100
+          description: Tax year this document is for
+        notes:
+          type: string
+          example: 'Example notes'
+          description: Notes about the document
+        rejectionReason:
+          type: string
+          example: 'Example rejection_reason'
+          description: Reason for rejection if applicable
+
+    UpdateDocumentInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 'Example user_id'
+          description: The tax professional who owns this
+        clientId:
+          type: string
+          example: 'Example client_id'
+        appointmentId:
+          type: string
+          example: 'Example appointment_id'
+          description: Optional link to specific appointment
+        documentType:
+          type: string
+          example: 'Example document_type'
+        fileUrl:
+          type: string
+          example: 'Example file_url'
+          description: Supabase Storage URL
+        fileName:
+          type: string
+          example: 'Example file_name'
+          description: Original filename
+        status:
+          type: string
+          example: 'Example status'
+        taxYear:
+          type: number
+          example: 100
+          description: Tax year this document is for
+        notes:
+          type: string
+          example: 'Example notes'
+          description: Notes about the document
+        rejectionReason:
+          type: string
+          example: 'Example rejection_reason'
+          description: Reason for rejection if applicable
+
+    DocumentListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - items
+            - total
+            - page
+            - limit
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            hasMore:
+              type: boolean
+              example: true
+            nextCursor:
+              type: string
+              example: eyJpZCI6IjEyMyJ9
+
+    DocumentResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Document'
+
+    DocumentDeleteResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - deleted
+          properties:
+            deleted:
+              type: boolean
+              example: true
+
+
+# ============================================================
+# REUSABLE PARAMETERS
+# ============================================================
+
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID
+      schema:
+        type: string
+        format: uuid
+      example: 550e8400-e29b-41d4-a716-446655440000
+
+    QueryPage:
+      name: page
+      in: query
+      required: false
+      description: Page number for pagination (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    QueryLimit:
+      name: limit
+      in: query
+      required: false
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+
+    QueryCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Cursor for pagination (use nextCursor from previous response)
+      schema:
+        type: string
+      example: eyJpZCI6IjEyMyJ9
+
+    QueryOrderBy:
+      name: orderBy
+      in: query
+      required: false
+      description: Field to order results by
+      schema:
+        type: string
+        default: createdAt
+      example: createdAt
+
+    QueryOrderDir:
+      name: orderDir
+      in: query
+      required: false
+      description: Order direction
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+      example: desc
+
+# ============================================================
+# REUSABLE RESPONSES
+# ============================================================
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input or validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              type: bad_request
+              message: Validation failed
+              details:
+                - field: email
+                  message: Invalid email format
+                  code: invalid_format
+              requestId: 550e8400-e29b-41d4-a716-446655440000
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              type: unauthorized
+              message: Authentication required
+              requestId: 550e8400-e29b-41d4-a716-446655440000
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              type: forbidden
+              message: You do not have permission to access this resource
+              requestId: 550e8400-e29b-41d4-a716-446655440000
+
+    NotFound:
+      description: Not Found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              type: not_found
+              message: The requested resource was not found
+              requestId: 550e8400-e29b-41d4-a716-446655440000
+
+    InternalError:
+      description: Internal Server Error - Unexpected error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              type: internal_error
+              message: An unexpected error occurred
+              requestId: 550e8400-e29b-41d4-a716-446655440000
+
+# ============================================================
+# API PATHS
+# ============================================================
+
+paths:
+  # --- Profile Endpoints ---
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: List Profile
+      description: |
+        Retrieve a paginated list of Profile records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listProfile
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+        - name: email
+          in: query
+          required: false
+          description: Filter by email
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          description: Filter by name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Profile
+      summary: Create Profile
+      description: Create a new Profile record.
+      operationId: createProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProfileInput'
+      responses:
+        '201':
+          description: Successfully created Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /profile/{id}:
+    get:
+      tags:
+        - Profile
+      summary: Get Profile by ID
+      description: Retrieve a single Profile record by its unique identifier.
+      operationId: getProfile
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Profile
+      summary: Update Profile
+      description: |
+        Update an existing Profile record.
+        Only provided fields will be updated (partial update).
+      operationId: updateProfile
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileInput'
+      responses:
+        '200':
+          description: Successfully updated Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Profile
+      summary: Delete Profile
+      description: |
+        Delete a Profile record by its unique identifier.
+      operationId: deleteProfile
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # --- Client Endpoints ---
+  /client:
+    get:
+      tags:
+        - Client
+      summary: List Client
+      description: |
+        Retrieve a paginated list of Client records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listClient
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+        - name: name
+          in: query
+          required: false
+          description: Filter by name
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          description: Filter by email
+          schema:
+            type: string
+        - name: phone
+          in: query
+          required: false
+          description: Filter by phone
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of Client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Client
+      summary: Create Client
+      description: Create a new Client record.
+      operationId: createClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientInput'
+      responses:
+        '201':
+          description: Successfully created Client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /client/{id}:
+    get:
+      tags:
+        - Client
+      summary: Get Client by ID
+      description: Retrieve a single Client record by its unique identifier.
+      operationId: getClient
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Client details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Client
+      summary: Update Client
+      description: |
+        Update an existing Client record.
+        Only provided fields will be updated (partial update).
+      operationId: updateClient
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientInput'
+      responses:
+        '200':
+          description: Successfully updated Client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Client
+      summary: Delete Client
+      description: |
+        Delete a Client record by its unique identifier.
+      operationId: deleteClient
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # --- Service Endpoints ---
+  /service:
+    get:
+      tags:
+        - Service
+      summary: List Service
+      description: |
+        Retrieve a paginated list of Service records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listService
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+        - name: name
+          in: query
+          required: false
+          description: Filter by name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Service
+      summary: Create Service
+      description: Create a new Service record.
+      operationId: createService
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateServiceInput'
+      responses:
+        '201':
+          description: Successfully created Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /service/{id}:
+    get:
+      tags:
+        - Service
+      summary: Get Service by ID
+      description: Retrieve a single Service record by its unique identifier.
+      operationId: getService
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Service details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Service
+      summary: Update Service
+      description: |
+        Update an existing Service record.
+        Only provided fields will be updated (partial update).
+      operationId: updateService
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateServiceInput'
+      responses:
+        '200':
+          description: Successfully updated Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Service
+      summary: Delete Service
+      description: |
+        Delete a Service record by its unique identifier.
+      operationId: deleteService
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # --- Appointment Endpoints ---
+  /appointment:
+    get:
+      tags:
+        - Appointment
+      summary: List Appointment
+      description: |
+        Retrieve a paginated list of Appointment records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listAppointment
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+        - name: startsAt
+          in: query
+          required: false
+          description: Filter by starts_at
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of Appointment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Appointment
+      summary: Create Appointment
+      description: Create a new Appointment record.
+      operationId: createAppointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentInput'
+      responses:
+        '201':
+          description: Successfully created Appointment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /appointment/{id}:
+    get:
+      tags:
+        - Appointment
+      summary: Get Appointment by ID
+      description: Retrieve a single Appointment record by its unique identifier.
+      operationId: getAppointment
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Appointment
+      summary: Update Appointment
+      description: |
+        Update an existing Appointment record.
+        Only provided fields will be updated (partial update).
+      operationId: updateAppointment
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAppointmentInput'
+      responses:
+        '200':
+          description: Successfully updated Appointment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Appointment
+      summary: Delete Appointment
+      description: |
+        Delete a Appointment record by its unique identifier.
+      operationId: deleteAppointment
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Appointment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # --- Availability Endpoints ---
+  /availability:
+    get:
+      tags:
+        - Availability
+      summary: List Availability
+      description: |
+        Retrieve a paginated list of Availability records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listAvailability
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+      responses:
+        '200':
+          description: Successful response with list of Availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Availability
+      summary: Create Availability
+      description: Create a new Availability record.
+      operationId: createAvailability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAvailabilityInput'
+      responses:
+        '201':
+          description: Successfully created Availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /availability/{id}:
+    get:
+      tags:
+        - Availability
+      summary: Get Availability by ID
+      description: Retrieve a single Availability record by its unique identifier.
+      operationId: getAvailability
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Availability details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Availability
+      summary: Update Availability
+      description: |
+        Update an existing Availability record.
+        Only provided fields will be updated (partial update).
+      operationId: updateAvailability
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAvailabilityInput'
+      responses:
+        '200':
+          description: Successfully updated Availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Availability
+      summary: Delete Availability
+      description: |
+        Delete a Availability record by its unique identifier.
+      operationId: deleteAvailability
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # --- Document Endpoints ---
+  /document:
+    get:
+      tags:
+        - Document
+      summary: List Document
+      description: |
+        Retrieve a paginated list of Document records.
+        Supports filtering, sorting, and cursor-based pagination.
+      operationId: listDocument
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryCursor'
+        - $ref: '#/components/parameters/QueryOrderBy'
+        - $ref: '#/components/parameters/QueryOrderDir'
+      responses:
+        '200':
+          description: Successful response with list of Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Document
+      summary: Create Document
+      description: Create a new Document record.
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentInput'
+      responses:
+        '201':
+          description: Successfully created Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /document/{id}:
+    get:
+      tags:
+        - Document
+      summary: Get Document by ID
+      description: Retrieve a single Document record by its unique identifier.
+      operationId: getDocument
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successful response with Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Document
+      summary: Update Document
+      description: |
+        Update an existing Document record.
+        Only provided fields will be updated (partial update).
+      operationId: updateDocument
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentInput'
+      responses:
+        '200':
+          description: Successfully updated Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Document
+      summary: Delete Document
+      description: |
+        Delete a Document record by its unique identifier.
+      operationId: deleteDocument
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Successfully deleted Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  # --- Custom Action Endpoints ---
+  //api/appointments/:id/confirm:
+    post:
+      tags:
+        - Actions
+      summary: confirmAppointment
+      description: Transition Appointment from draft to confirmed
+      operationId: confirmAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/appointments/:id/start:
+    post:
+      tags:
+        - Actions
+      summary: startAppointment
+      description: Transition Appointment from confirmed to in_progress
+      operationId: startAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/appointments/:id/complete:
+    post:
+      tags:
+        - Actions
+      summary: completeAppointment
+      description: Transition Appointment from in_progress to completed
+      operationId: completeAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/appointments/:id/cancel:
+    post:
+      tags:
+        - Actions
+      summary: cancelAppointment
+      description: Transition Appointment from confirmed to cancelled
+      operationId: cancelAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/appointments/:id/cancel-draft:
+    post:
+      tags:
+        - Actions
+      summary: cancel_draftAppointment
+      description: Transition Appointment from draft to cancelled
+      operationId: cancelDraftAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/appointments/:id/mark-no-show:
+    post:
+      tags:
+        - Actions
+      summary: mark_no_showAppointment
+      description: Transition Appointment from confirmed to no_show
+      operationId: markNoShowAppointment
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/documents/:id/upload:
+    post:
+      tags:
+        - Actions
+      summary: uploadDocument
+      description: Transition Document from requested to uploaded
+      operationId: uploadDocument
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/documents/:id/review:
+    post:
+      tags:
+        - Actions
+      summary: reviewDocument
+      description: Transition Document from uploaded to reviewed
+      operationId: reviewDocument
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/documents/:id/accept:
+    post:
+      tags:
+        - Actions
+      summary: acceptDocument
+      description: Transition Document from reviewed to accepted
+      operationId: acceptDocument
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/documents/:id/reject:
+    post:
+      tags:
+        - Actions
+      summary: rejectDocument
+      description: Transition Document from reviewed to rejected
+      operationId: rejectDocument
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  //api/documents/:id/reupload:
+    post:
+      tags:
+        - Actions
+      summary: reuploadDocument
+      description: Transition Document from rejected to uploaded
+      operationId: reuploadDocument
+      parameters:
+        - name: id
+          in: query
+          required: 
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+# ============================================================
+# TAGS
+# ============================================================
+
+tags:
+  - name: Profile
+    description: |
+      Tax professional profile extending auth.users
+
+      CRUD operations for managing Profile resources.
+  - name: Client
+    description: |
+      Tax clients belonging to a practitioner
+
+      CRUD operations for managing Client resources.
+  - name: Service
+    description: |
+      Service offerings by a tax professional
+
+      CRUD operations for managing Service resources.
+  - name: Appointment
+    description: |
+      Scheduled appointments between practitioners and clients
+
+      CRUD operations for managing Appointment resources.
+  - name: Availability
+    description: |
+      Practitioner working hours
+
+      CRUD operations for managing Availability resources.
+  - name: Document
+    description: |
+      Client tax documents
+
+      CRUD operations for managing Document resources.
+  - name: Actions
+    description: Custom action endpoints for business operations
+
+# ============================================================
+# GENERATED BY MENTAL MODELS SDLC
+# ============================================================

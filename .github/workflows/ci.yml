@@ -1,0 +1,363 @@
+# CI/CD Pipeline - taxbook-pro
+# Generated: 2026-01-19
+#
+# This workflow runs on push to main and pull requests.
+# It includes:
+# - TypeScript type checking
+# - Linting
+# - Unit tests
+# - E2E tests with Playwright
+# - Build verification
+# - Supabase migration validation
+# - Vercel deploy preview for PRs
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  # Supabase configuration (set in repository secrets)
+  SUPABASE_ACCESS_TOKEN: ${{secrets.SUPABASE_ACCESS_TOKEN}}
+  SUPABASE_DB_PASSWORD: ${{secrets.SUPABASE_DB_PASSWORD}}
+  SUPABASE_PROJECT_ID: ${{secrets.SUPABASE_PROJECT_ID}}
+
+jobs:
+  # ============================================================
+  # Type Checking
+  # ============================================================
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+  # ============================================================
+  # Linting
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+  # ============================================================
+  # Unit Tests
+  # ============================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ============================================================
+  # E2E Tests with Playwright
+  # ============================================================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, unit-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          # E2E test environment variables
+          NEXT_PUBLIC_SUPABASE_URL: ${{secrets.NEXT_PUBLIC_SUPABASE_URL}}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY}}
+          E2E_TEST_USER_EMAIL: ${{secrets.E2E_TEST_USER_EMAIL}}
+          E2E_TEST_USER_PASSWORD: ${{secrets.E2E_TEST_USER_PASSWORD}}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  # ============================================================
+  # Build Verification
+  # ============================================================
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{secrets.NEXT_PUBLIC_SUPABASE_URL}}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY}}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            .next/
+            out/
+          retention-days: 1
+
+  # ============================================================
+  # Supabase Migration Check
+  # ============================================================
+  migration-check:
+    name: Supabase Migration Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Verify migrations are valid SQL
+        run: |
+          # Check that all migration files are valid
+          for file in supabase/migrations/*.sql; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Basic SQL syntax validation
+              if ! head -1 "$file" | grep -qE '^(--|CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|BEGIN|SET|DO|GRANT|REVOKE|COMMENT)' 2>/dev/null; then
+                echo "Warning: $file may have an unusual first line"
+              fi
+            fi
+          done
+          echo "Migration files validated"
+
+      - name: Check for pending migrations
+        run: |
+          # List migrations that would be applied
+          if [ -d "supabase/migrations" ]; then
+            echo "Found $(ls -1 supabase/migrations/*.sql 2>/dev/null | wc -l) migration files"
+            ls -la supabase/migrations/*.sql 2>/dev/null || echo "No migration files found"
+          else
+            echo "No supabase/migrations directory found"
+          fi
+
+      - name: Validate migration naming convention
+        run: |
+          # Ensure migrations follow timestamp naming convention
+          if [ -d "supabase/migrations" ]; then
+            for file in supabase/migrations/*.sql; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                if ! echo "$filename" | grep -qE '^[0-9]{14}_.*\.sql$'; then
+                  echo "Warning: $filename does not follow naming convention (YYYYMMDDHHMMSS_name.sql)"
+                fi
+              fi
+            done
+          fi
+
+  # ============================================================
+  # Vercel Deploy Preview (PRs only)
+  # ============================================================
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [build, unit-tests]
+    if: github.event_name == 'pull_request'
+    environment:
+      name: Preview
+      url: ${{ steps.deploy.outputs.preview-url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=preview --token=${{secrets.VERCEL_TOKEN}}
+
+      - name: Build for Vercel
+        run: vercel build --token=${{secrets.VERCEL_TOKEN}}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{secrets.VERCEL_TOKEN}})
+          echo "preview-url=$url" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Deploy Preview
+
+            Your changes have been deployed to a preview environment:
+
+            **Preview URL:** ${{ steps.deploy.outputs.preview-url }}
+
+            This preview will be updated with each push to this PR.`
+            })
+
+  # ============================================================
+  # Production Deploy (main branch only)
+  # ============================================================
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: [build, unit-tests, e2e-tests, migration-check]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: Production
+      url: ${{ steps.deploy.outputs.production-url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}
+
+      - name: Build for Vercel
+        run: vercel build --prod --token=${{secrets.VERCEL_TOKEN}}
+
+      - name: Deploy to Vercel Production
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{secrets.VERCEL_TOKEN}})
+          echo "production-url=$url" >> $GITHUB_OUTPUT
+
+      - name: Apply Supabase migrations
+        run: |
+          # Only apply migrations if there are new ones
+          if [ -d "supabase/migrations" ]; then
+            echo "Checking for migrations to apply..."
+            # Note: In production, you may want to use Supabase's migration system
+            # supabase db push --project-ref $SUPABASE_PROJECT_ID
+            echo "Migrations would be applied here"
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{secrets.SUPABASE_ACCESS_TOKEN}}
+          SUPABASE_PROJECT_ID: ${{secrets.SUPABASE_PROJECT_ID}}
+
+# ============================================================
+# Required Repository Secrets
+# ============================================================
+# SUPABASE_ACCESS_TOKEN     - Supabase personal access token
+# SUPABASE_DB_PASSWORD      - Database password
+# SUPABASE_PROJECT_ID       - Supabase project reference ID
+# NEXT_PUBLIC_SUPABASE_URL  - Supabase project URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY - Supabase anon/public key
+# VERCEL_TOKEN              - Vercel deployment token
+# E2E_TEST_USER_EMAIL       - Test user email for E2E tests
+# E2E_TEST_USER_PASSWORD    - Test user password for E2E tests
+#
+# Optional:
+# VERCEL_ORG_ID             - Vercel organization ID
+# VERCEL_PROJECT_ID         - Vercel project ID

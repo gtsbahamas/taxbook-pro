@@ -1,0 +1,406 @@
+# Security Scanning Workflow - taxbook-pro
+# Generated: 2026-01-19
+#
+# Comprehensive security scanning for JavaScript/TypeScript projects.
+# Runs on weekly schedule and on pull requests to catch vulnerabilities early.
+#
+# Features:
+# - npm audit for dependency vulnerabilities
+# - OWASP dependency check for known CVEs
+# - CodeQL analysis for JavaScript/TypeScript code
+# - Secret scanning (hardcoded credentials detection)
+# - License compliance verification
+# - Automated PR comments with security findings
+#
+# Place in: .github/workflows/security.yml
+
+name: Security Scan
+
+on:
+  schedule:
+    # Run weekly on Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    # Allow manual triggering
+
+# ============================================================
+# PERMISSIONS
+# ============================================================
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  actions: read
+
+# ============================================================
+# CONCURRENCY
+# ============================================================
+
+concurrency:
+  group: security-${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+
+# ============================================================
+# JOBS
+# ============================================================
+
+jobs:
+  # ----------------------------------------------------------
+  # NPM AUDIT - Dependency Vulnerability Scanning
+  # ----------------------------------------------------------
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run npm audit
+        id: npm-audit
+        continue-on-error: true
+        run: |
+          echo "## NPM Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Run audit and capture output
+          npm audit --json > audit-results.json 2>&1 || true
+
+          # Parse results
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' audit-results.json)
+          LOW=$(jq '.metadata.vulnerabilities.low // 0' audit-results.json)
+
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| Moderate | $MODERATE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+
+          # Set outputs for PR comment
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "moderate=$MODERATE" >> $GITHUB_OUTPUT
+          echo "low=$LOW" >> $GITHUB_OUTPUT
+
+          # Fail if critical or high vulnerabilities found
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Action Required" >> $GITHUB_STEP_SUMMARY
+            echo "Critical or high severity vulnerabilities detected. Run \`npm audit fix\` to resolve." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-results
+          path: audit-results.json
+          retention-days: 30
+
+  # ----------------------------------------------------------
+  # OWASP DEPENDENCY CHECK - Known CVE Detection
+  # ----------------------------------------------------------
+  owasp-dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: dependency-check
+        with:
+          project: 'taxbook-pro'
+          path: '.'
+          format: 'HTML,JSON,SARIF'
+          out: 'reports'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+            --enableExperimental
+            --scan package.json
+            --scan package-lock.json
+            
+            
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-dependency-check-report
+          path: reports/
+          retention-days: 30
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+          category: owasp-dependency-check
+
+  # ----------------------------------------------------------
+  # CODEQL ANALYSIS - Static Application Security Testing
+  # ----------------------------------------------------------
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+          # Additional query packs for comprehensive analysis
+          packs: |
+            codeql/javascript-queries:Security/CWE
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+          output: codeql-results
+          upload: true
+
+      - name: Upload CodeQL results
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results
+          path: codeql-results/
+          retention-days: 30
+
+  # ----------------------------------------------------------
+  # SECRET SCANNING - Hardcoded Credentials Detection
+  # ----------------------------------------------------------
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comprehensive scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITLEAKS_NOTIFY_USER_LIST: '@${{github.actor}}'
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{github.event.repository.default_branch}}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Custom secret patterns check
+        run: |
+          echo "## Secret Scanning Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          SECRETS_FOUND=0
+
+          # Check for common secret patterns
+          PATTERNS=(
+            'password\s*=\s*["\047][^"\047]{8,}["\047]'
+            'api[_-]?key\s*[:=]\s*["\047][A-Za-z0-9]{20,}["\047]'
+            'secret[_-]?key\s*[:=]\s*["\047][A-Za-z0-9]{20,}["\047]'
+            'private[_-]?key\s*[:=]'
+            'aws[_-]?access[_-]?key[_-]?id\s*[:=]'
+            'aws[_-]?secret[_-]?access[_-]?key\s*[:=]'
+            'AKIA[0-9A-Z]{16}'
+            'ghp_[A-Za-z0-9]{36}'
+            'gho_[A-Za-z0-9]{36}'
+            'sk-[A-Za-z0-9]{48}'
+            'Bearer\s+[A-Za-z0-9\-_]{20,}'
+          )
+
+          for pattern in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rniE "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --include="*.json" --include="*.env*" --include="*.yaml" --include="*.yml" . 2>/dev/null | grep -v node_modules | grep -v ".git" | head -20 || true)
+            if [ -n "$MATCHES" ]; then
+              echo "### Potential secret pattern found" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$MATCHES" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              SECRETS_FOUND=1
+            fi
+          done
+
+          if [ "$SECRETS_FOUND" -eq 0 ]; then
+            echo "No hardcoded secrets detected." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Action Required" >> $GITHUB_STEP_SUMMARY
+            echo "Potential secrets found in codebase. Review and remove before merging." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+  # ----------------------------------------------------------
+  # LICENSE COMPLIANCE - OSS License Verification
+  # ----------------------------------------------------------
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        id: license-check
+        run: |
+          echo "## License Compliance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Define allowed and prohibited licenses
+          ALLOWED_LICENSES="MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0;Unlicense;0BSD;CC-BY-3.0;CC-BY-4.0;WTFPL;Python-2.0;BlueOak-1.0.0"
+
+          # Copyleft licenses that may require source disclosure
+          COPYLEFT_LICENSES="GPL;LGPL;AGPL;MPL;EPL;CDDL"
+
+          # Generate license report
+          license-checker --json --production > licenses.json
+
+          # Check for prohibited licenses
+          PROHIBITED=$(license-checker --production --failOn "$COPYLEFT_LICENSES" 2>&1 || true)
+
+          if echo "$PROHIBITED" | grep -q "Found prohibited"; then
+            echo "### Warning: Copyleft Licenses Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The following packages use copyleft licenses that may require source disclosure:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$PROHIBITED" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "copyleft_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "All dependencies use permissive licenses." >> $GITHUB_STEP_SUMMARY
+            echo "copyleft_found=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Generate summary table
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### License Distribution" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          license-checker --production --summary | head -20 >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 30
+
+  # ----------------------------------------------------------
+  # SECURITY REPORT - Aggregate and Comment on PR
+  # ----------------------------------------------------------
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [npm-audit, owasp-dependency-check, codeql-analysis, secret-scanning, license-compliance]
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate consolidated report
+        id: report
+        run: |
+          # Determine overall status
+          NPM_STATUS="${{{needs.npm-audit.result}}}"
+          OWASP_STATUS="${{{needs.owasp-dependency-check.result}}}"
+          CODEQL_STATUS="${{{needs.codeql-analysis.result}}}"
+          SECRET_STATUS="${{{needs.secret-scanning.result}}}"
+          LICENSE_STATUS="${{{needs.license-compliance.result}}}"
+
+          if [ "$NPM_STATUS" = "success" ] && [ "$OWASP_STATUS" = "success" ] && [ "$CODEQL_STATUS" = "success" ] && [ "$SECRET_STATUS" = "success" ] && [ "$LICENSE_STATUS" = "success" ]; then
+            OVERALL_STATUS="passed"
+            STATUS_EMOJI="white_check_mark"
+          else
+            OVERALL_STATUS="failed"
+            STATUS_EMOJI="x"
+          fi
+
+          echo "overall_status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+          echo "status_emoji=$STATUS_EMOJI" >> $GITHUB_OUTPUT
+
+          # Build report body
+          cat << 'EOF' > report.md
+          ## Security Scan Results
+
+          | Check | Status |
+          |-------|--------|
+          | NPM Audit | $( [ "$NPM_STATUS" = "success" ] && echo "Passed" || echo "Failed" ) |
+          | OWASP Dependency Check | $( [ "$OWASP_STATUS" = "success" ] && echo "Passed" || echo "Failed" ) |
+          | CodeQL Analysis | $( [ "$CODEQL_STATUS" = "success" ] && echo "Passed" || echo "Failed" ) |
+          | Secret Scanning | $( [ "$SECRET_STATUS" = "success" ] && echo "Passed" || echo "Failed" ) |
+          | License Compliance | $( [ "$LICENSE_STATUS" = "success" ] && echo "Passed" || echo "Failed" ) |
+
+          ### Details
+
+          - **NPM Audit**: Checks for known vulnerabilities in npm dependencies
+          - **OWASP Dependency Check**: Scans for CVEs in all project dependencies
+          - **CodeQL Analysis**: Static analysis for security vulnerabilities in JavaScript/TypeScript
+          - **Secret Scanning**: Detects hardcoded secrets and credentials
+          - **License Compliance**: Verifies all dependencies use acceptable licenses
+
+          ---
+          *Generated by Security Scan Workflow*
+          EOF
+
+      - name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: security-scan
+          path: report.md
+
+      - name: Fail if security issues found
+        if: steps.report.outputs.overall_status == 'failed'
+        run: |
+          echo "Security scan failed. Please review the individual job results above."
+          exit 1
+
+# ============================================================
+# GENERATED BY MENTAL MODELS SDLC
+# ============================================================

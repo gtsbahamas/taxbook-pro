@@ -1,0 +1,226 @@
+# Lighthouse CI - taxbook-pro
+# Generated: 2026-01-19
+#
+# This workflow runs Lighthouse CI on key pages to ensure performance,
+# accessibility, best practices, and SEO meet quality thresholds.
+# Fails PRs if scores drop below thresholds.
+#
+# Usage: Automatically runs on PRs and pushes to main
+
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Lighthouse score thresholds (0-100)
+  PERFORMANCE_THRESHOLD: 90
+  ACCESSIBILITY_THRESHOLD: 95
+  BEST_PRACTICES_THRESHOLD: 90
+  SEO_THRESHOLD: 90
+
+jobs:
+  lighthouse:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Add your build environment variables here
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Start application
+        run: |
+          npm run start &
+          # Wait for server to be ready
+          npx wait-on http://localhost:3000 --timeout 60000
+        env:
+          PORT: 3000
+
+      - name: Run Lighthouse CI
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          # URLs to audit
+          urls: |
+            http://localhost:3000/
+            http://localhost:3000/login
+            http://localhost:3000/dashboard
+          # Upload results to temporary public storage
+          temporaryPublicStorage: true
+          # Lighthouse configuration
+          configPath: ./lighthouserc.json
+          uploadArtifacts: true
+          artifactName: lighthouse-reports
+
+      - name: Check Performance Score
+        run: |
+          echo "Checking Lighthouse scores against thresholds..."
+
+          # Parse manifest to get scores
+          MANIFEST='${{ steps.lighthouse.outputs.manifest }}'
+
+          # Check each result
+          echo "$MANIFEST" | jq -r '.[] | "\(.url) - Performance: \(.summary.performance), Accessibility: \(.summary.accessibility), Best Practices: \(.summary["best-practices"]), SEO: \(.summary.seo)"'
+
+          # Validate scores meet thresholds
+          FAILED=0
+
+          while IFS= read -r line; do
+            URL=$(echo "$line" | jq -r '.url')
+            PERF=$(echo "$line" | jq -r '.summary.performance * 100 | floor')
+            A11Y=$(echo "$line" | jq -r '.summary.accessibility * 100 | floor')
+            BP=$(echo "$line" | jq -r '.summary["best-practices"] * 100 | floor')
+            SEO=$(echo "$line" | jq -r '.summary.seo * 100 | floor')
+
+            echo "---"
+            echo "URL: $URL"
+            echo "Performance: $PERF (threshold: $PERFORMANCE_THRESHOLD)"
+            echo "Accessibility: $A11Y (threshold: $ACCESSIBILITY_THRESHOLD)"
+            echo "Best Practices: $BP (threshold: $BEST_PRACTICES_THRESHOLD)"
+            echo "SEO: $SEO (threshold: $SEO_THRESHOLD)"
+
+            if [ "$PERF" -lt "$PERFORMANCE_THRESHOLD" ]; then
+              echo "::error::Performance score $PERF is below threshold $PERFORMANCE_THRESHOLD for $URL"
+              FAILED=1
+            fi
+
+            if [ "$A11Y" -lt "$ACCESSIBILITY_THRESHOLD" ]; then
+              echo "::error::Accessibility score $A11Y is below threshold $ACCESSIBILITY_THRESHOLD for $URL"
+              FAILED=1
+            fi
+
+            if [ "$BP" -lt "$BEST_PRACTICES_THRESHOLD" ]; then
+              echo "::error::Best Practices score $BP is below threshold $BEST_PRACTICES_THRESHOLD for $URL"
+              FAILED=1
+            fi
+
+            if [ "$SEO" -lt "$SEO_THRESHOLD" ]; then
+              echo "::error::SEO score $SEO is below threshold $SEO_THRESHOLD for $URL"
+              FAILED=1
+            fi
+          done < <(echo "$MANIFEST" | jq -c '.[]')
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::One or more Lighthouse scores are below the required thresholds"
+            exit 1
+          fi
+
+          echo "All Lighthouse scores meet thresholds!"
+
+      - name: Format Lighthouse Score for Comment
+        id: format_scores
+        if: github.event_name == 'pull_request'
+        run: |
+          MANIFEST='${{ steps.lighthouse.outputs.manifest }}'
+          LINKS='${{ steps.lighthouse.outputs.links }}'
+
+          # Build markdown table
+          COMMENT="## Lighthouse Report\n\n"
+          COMMENT+="| Page | Performance | Accessibility | Best Practices | SEO | Report |\n"
+          COMMENT+="|------|-------------|---------------|----------------|-----|--------|\n"
+
+          while IFS= read -r line; do
+            URL=$(echo "$line" | jq -r '.url')
+            PAGE_PATH=$(echo "$URL" | sed 's|http://localhost:3000||')
+            [ -z "$PAGE_PATH" ] && PAGE_PATH="/"
+
+            PERF=$(echo "$line" | jq -r '.summary.performance * 100 | floor')
+            A11Y=$(echo "$line" | jq -r '.summary.accessibility * 100 | floor')
+            BP=$(echo "$line" | jq -r '.summary["best-practices"] * 100 | floor')
+            SEO=$(echo "$line" | jq -r '.summary.seo * 100 | floor')
+
+            # Get report link
+            REPORT_LINK=$(echo "$LINKS" | jq -r --arg url "$URL" '.[$url]')
+
+            # Add emoji indicators
+            PERF_EMOJI=$([ "$PERF" -ge "$PERFORMANCE_THRESHOLD" ] && echo "+" || echo "-")
+            A11Y_EMOJI=$([ "$A11Y" -ge "$ACCESSIBILITY_THRESHOLD" ] && echo "+" || echo "-")
+            BP_EMOJI=$([ "$BP" -ge "$BEST_PRACTICES_THRESHOLD" ] && echo "+" || echo "-")
+            SEO_EMOJI=$([ "$SEO" -ge "$SEO_THRESHOLD" ] && echo "+" || echo "-")
+
+            COMMENT+="| \`$PAGE_PATH\` | $PERF | $A11Y | $BP | $SEO | [View]($REPORT_LINK) |\n"
+          done < <(echo "$MANIFEST" | jq -c '.[]')
+
+          COMMENT+="\n### Thresholds\n"
+          COMMENT+="- Performance: $PERFORMANCE_THRESHOLD\n"
+          COMMENT+="- Accessibility: $ACCESSIBILITY_THRESHOLD\n"
+          COMMENT+="- Best Practices: $BEST_PRACTICES_THRESHOLD\n"
+          COMMENT+="- SEO: $SEO_THRESHOLD\n"
+
+          # Save to file for the comment step
+          echo -e "$COMMENT" > lighthouse-comment.md
+
+          # Also set as output (escaped for GitHub Actions)
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('lighthouse-comment.md', 'utf8');
+
+            // Find existing Lighthouse comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('## Lighthouse Report')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+      - name: Upload Lighthouse Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          retention-days: 30
